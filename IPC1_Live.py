@@ -9,6 +9,8 @@ import pickle
 import sys
 import numpy as np
 np.set_printoptions(precision=2)
+import dlib
+detector = dlib.get_frontal_face_detector()
 from sklearn.mixture import GMM
 import openface
 import pdb
@@ -18,13 +20,15 @@ from websocket_server import WebsocketServer
 DETECTION_WIDTH = 240
 DETECTION_HEIGHT = 135
 cam_dect_name = None
+# 指定当前项目所在目录
 fileDir = os.path.dirname(os.path.realpath(__file__))
+# 指定Dlib以及OpenFace模块所在目录
 modelDir = os.path.join(fileDir, '', 'models')
+# 指定Dlib模块所在目录
 dlibModelDir = os.path.join(modelDir, 'dlib')
+# 指定OpenFace模块所在目录
 openfaceModelDir = os.path.join(modelDir, 'openface')
 
-import dlib
-detector = dlib.get_frontal_face_detector()
 
 def getRep(bgrImg):
     start = time.time()
