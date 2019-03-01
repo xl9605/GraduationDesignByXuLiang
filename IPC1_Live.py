@@ -122,8 +122,9 @@ def infer(img, args):
             pass
     return (persons, confidences ,bbs)
 
-
+# 实现通过摄像头采集数据，并且进行人脸识别，同时通过管道技术，将摄像头拍到的图像同步传输到WEB服务端
 def cam_dect():
+    # cam_dect_name存放的是识别到的人的姓名
     global cam_dect_name
     # Capture device. Usually 0 will be webcam and 1 will be usb cam.
     # video_capture = cv2.VideoCapture(args.captureDevice)
