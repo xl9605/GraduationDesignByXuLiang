@@ -1,4 +1,4 @@
-#!/usr/bin/env python2
+#!/usr/bin/env python３
 
 import time
 start = time.time()
@@ -89,7 +89,6 @@ def infer(img, args):
                 (le, clf) = pickle.load(f)  # le - label and clf - classifer
         else:
                 #set_trace()
-
                 (le, clf) = pickle.load(f, encoding='latin1')  # le - label and clf - classifer
 
     repsAndBBs = getRep(img)
@@ -135,12 +134,14 @@ def cam_dect():
     # set_trace()
 
     # create named pipe to
+    # 通过管道技创建一个往里面写图片的文件
     invasion_subsys_name_pipe = "/tmp/IPC1_Image_pipe"
     try:
         # os.unlink(invasion_subsys_name_pipe)
         os.mkfifo(invasion_subsys_name_pipe)
     except OSError:
         pass
+    # 读取这个管道文件
     invasion_subsys_fh = os.open(invasion_subsys_name_pipe, os.O_WRONLY)
     #这一段是调用制作的雄迈的ＩＰＣ的网络摄像头
     # # 7-15-add
@@ -166,8 +167,10 @@ def cam_dect():
         sucess, img = cap.read()
 
         # frame = np.asarray(cp.queryframe('array')).reshape(1080, 1920, 3)
+        # 将摄像头拍到的图像数据重置成1920x1080分辨率
         frame = cv2.resize(img, (1920, 1080))
         # ret, frame = video_capture.read()
+        # 每两帧进行一次人脸识别
         if(counter%2 == 0):
             persons, confidences, bbs = infer(frame, args)
             print("P: " + str(persons) + " C: " + str(confidences))
