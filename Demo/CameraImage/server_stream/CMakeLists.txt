@@ -3,6 +3,8 @@ cmake_minimum_required(VERSION 3.4.1)
 set(CMAKE_MODULE_PATH ${CMAKE_CURRENT_SOURCE_DIR}/CMakeModules)
 PROJECT(server_ffmpeg)
 
+add_definitions("-Wall -g")
+
 find_package(OpenCV REQUIRED)
 find_package(SDL REQUIRED)
 #find_package(FFmpeg REQUIRED)

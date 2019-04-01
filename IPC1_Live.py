@@ -17,9 +17,13 @@ import pdb
 import threading
 import time
 from websocket_server import WebsocketServer
-DETECTION_WIDTH = 240
-DETECTION_HEIGHT = 135
+DETECTION_WIDTH = 480
+DETECTION_HEIGHT = 270
 cam_dect_name = None
+cam_confidences_count = 0
+sum_cam_confidences = 0
+
+cam_confidences = None
 # 指定当前项目所在目录
 fileDir = os.path.dirname(os.path.realpath(__file__))
 # 指定Dlib以及OpenFace模块所在目录
@@ -135,7 +139,7 @@ def cam_dect():
 
     # create named pipe to
     # 通过管道技创建一个往里面写图片的文件
-    invasion_subsys_name_pipe = "/tmp/IPC1_Image_pipe"
+    invasion_subsys_name_pipe = "/tmp/IPC1_Image_Pipe"
     try:
         # os.unlink(invasion_subsys_name_pipe)
         os.mkfifo(invasion_subsys_name_pipe)
@@ -184,8 +188,8 @@ def cam_dect():
                 pass
 
             for i, c in enumerate(confidences):
-                if c <= args.threshold:  # 0.5 is kept as threshold for known face.
-                    persons[i] = "_unknown"
+                global cam_confidences
+                cam_confidences = c
 
             exist_unknown_person = False
 
@@ -247,13 +251,41 @@ class myThread1(threading.Thread):
     # Called when a client sends a message
     def message_received(self, client, server, message):
         global cam_dect_name
+        global cam_confidences
         if len(message) > 200:
             message = message[:200] + '..'
         print("Client(%d) said: %s" % (client['id'], message))
-        if (cam_dect_name == "[]"):
-            server.send_message_to_all("YES")
-        else :
-            server.send_message_to_all("NO")
+        global cam_confidences_count
+        global sum_cam_confidences
+        if (cam_dect_name == "[b'xuliang']"):
+            sum_cam_confidences = sum_cam_confidences + cam_confidences
+            cam_confidences_count = cam_confidences_count + 1
+            print(cam_confidences_count)
+            if (cam_confidences_count % 3 == 0):
+                print(cam_confidences_count)
+                if ((sum_cam_confidences) / 3.0 >= 0.7):
+                    server.send_message_to_all("JianGe")
+                else:
+                    server.send_message_to_all("NoPower")
+                sum_cam_confidences = 0
+                print(sum_cam_confidences)
+        elif (cam_dect_name == "[]"):
+            server.send_message_to_all("Normal")
+            print(cam_confidences_count)
+
+        # if (cam_dect_name == "[b'xuliang']"):
+
+        #
+        #     if(cam_confidences_count%5 == 0):
+        #         cam_confidences_count = cam_confidences_count + 1
+        #     if(cam_confidences >= 0.95):
+        #         server.send_message_to_all("JianGe")
+        #     else:
+        #         server.send_message_to_all("NoPower")
+        # elif (cam_dect_name == "[]"):
+        #     server.send_message_to_all("Normal")
+        #
+
 
     def run(self):
         print("开启线程： " + self.name)

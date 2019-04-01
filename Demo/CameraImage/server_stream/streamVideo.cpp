@@ -25,6 +25,7 @@
 #include <opencv2/highgui/highgui.hpp>
 #include <opencv2/imgproc/imgproc.hpp>
 
+//画质分辨率设置
 const int IMAGE_ROW_NUMB = 1080;
 const int IMAGE_COL_NUMB = 1920;
 
@@ -136,7 +137,8 @@ int main(int argc, char *argv[])
     int ret;
     //旋转角度
     //double angle = 0.9375;
-    const char *out_path = "rtmp://localhost:1935/IPC1Video/Video";
+    //推流地址
+    const char *out_path = "rtmp://localhost:1935/hls/IPC2_Video";
     //int dec_got_frame;
     int enc_got_frame;
     //ffmpeg注册复用器，编码器等的函数av_register_all()。该函数在所有基于ffmpeg的应用程序中几乎都是第一个被调用的。只有调用了该函数，才能使用复用器，编码器等。
@@ -170,6 +172,7 @@ int main(int argc, char *argv[])
     pCodecCtx->width = src.cols;
     pCodecCtx->height = src.rows;
     pCodecCtx->time_base.num = 1;
+    //帧率设置
     pCodecCtx->time_base.den = 25;
     //pCodecCtx->bit_rate = 400000;
     pCodecCtx->gop_size = 250;
@@ -267,9 +270,11 @@ int main(int argc, char *argv[])
     struct tm *lt;
 
     // init name pipe
-    char *face_named_FIFO = "/tmp/IPC1_Image_pipe";
-    mkfifo(face_named_FIFO, 0666);
+    // 通过管道将图片读出
+    char *face_named_FIFO = "/tmp/IPC2_Image_Pipe";
+    //mkfifo(face_named_FIFO, 0666);
     int face_named_FIFO_fd = open(face_named_FIFO, O_RDONLY);
+    //printf("%d",src.size().area() * 3);
 
     //Frame = cvmat_to_avframe(&src);
     while (1)
@@ -279,6 +284,7 @@ int main(int argc, char *argv[])
         {
             FrameC = 1;
         }
+	    //printf("%s","---++++------");
 
         //        //--- get image data
         //        src = imread("a1.png",1);
@@ -288,6 +294,7 @@ int main(int argc, char *argv[])
         // NOTE : get image from named pipe
         if (read(face_named_FIFO_fd, src.data, src.size().area() * 3) < 1)
         {
+	    //printf("%d",src.size().area() * 3);
             printf("data read error!\n");
             continue;
         }
@@ -327,7 +334,7 @@ int main(int argc, char *argv[])
         //cv::Point point(10, 50);
         // 颜色，使用黄色
         //cv::Scalar scalar(0, 255, 255, 0);
-
+        //左上角的信息
         sprintf(showTex, "Frame:%d/%d:%d", Fcount, lt->tm_min, lt->tm_sec);
         cv::putText(src, showTex, Point(20, 30), FONT_HERSHEY_SIMPLEX, 1, Scalar(255, 251, 240), 4, 8);
         //av_packet_rescale_ts(dec_pkt, ifmt_ctx->streams[dec_pkt->stream_index]->time_base,
@@ -396,13 +403,13 @@ int main(int argc, char *argv[])
 
             ret = av_interleaved_write_frame(ofmt_ctx, &enc_pkt);
             av_free_packet(&enc_pkt);
-            src.release();
+            //src.release();
             av_frame_free(&pframe);
             ++Fcount;
             ++FrameC;
         }
         av_free_packet(&enc_pkt);
-        src.release();
+        //src.release();
         av_frame_free(&pframe);
     }
     //总体流程完毕之后，还剩下最后的flush encoder操作，输出之前存储在缓冲区内的数据

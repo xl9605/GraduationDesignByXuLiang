@@ -14,8 +14,8 @@ from sklearn.mixture import GMM
 import openface
 import threading
 from websocket_server import WebsocketServer
-DETECTION_WIDTH = 240
-DETECTION_HEIGHT = 135
+DETECTION_WIDTH = 480
+DETECTION_HEIGHT = 270
 cam_dect_name = None
 cam_confidences = None
 fileDir = os.path.dirname(os.path.realpath(__file__))
@@ -24,6 +24,8 @@ dlibModelDir = os.path.join(modelDir, 'dlib')
 openfaceModelDir = os.path.join(modelDir, 'openface')
 import dlib
 detector = dlib.get_frontal_face_detector()
+cam_confidences_count = 0
+sum_cam_confidences = 0
 
 
 def getRep(bgrImg):
@@ -119,7 +121,7 @@ def cam_dect():
     # set_trace()
 
     # create named pipe to
-    invasion_subsys_name_pipe = "/tmp/IPC2_Image_pipe"
+    invasion_subsys_name_pipe = "/tmp/IPC2_Image_Pipe"
     try:
         # os.unlink(invasion_subsys_name_pipe)
         os.mkfifo(invasion_subsys_name_pipe)
@@ -140,7 +142,7 @@ def cam_dect():
     # 调用笔记本内置摄像头，所以参数为0，如果有其他的摄像头可以调整参数为1，2
     # 使用笔记本自带的是0
     # 使用第二个USB相机是2
-    cap = cv2.VideoCapture(2)
+    cap = cv2.VideoCapture(0)
     time.sleep(2)
 
     warning_counter = 0
@@ -241,15 +243,24 @@ class myThread1(threading.Thread):
         if len(message) > 200:
             message = message[:200] + '..'
         #print("Client(%d) said: %s" % (client['id'], message))
-        if (cam_dect_name == "[b'xuliang']"):
-            if(cam_confidences >= 0.75):
-                server.send_message_to_all("YES")
-            else:
-                server.send_message_to_all("NO")
+        global cam_confidences_count
+        global sum_cam_confidences
+        if (cam_dect_name == "[b'renjingsong']" or cam_dect_name == "[b'xieyouliang']"):
+        #if (cam_dect_name == "[b'xuliang']"):
+            sum_cam_confidences = sum_cam_confidences + cam_confidences
+            cam_confidences_count = cam_confidences_count + 1
+            print(cam_confidences_count)
+            if(cam_confidences_count%3 == 0):
+                print(cam_confidences_count)
+                if((sum_cam_confidences)/3.0 >= 0.9):
+                    server.send_message_to_all("YES")
+                else:
+                    server.send_message_to_all("NO")
+                sum_cam_confidences = 0
         elif (cam_dect_name == "[]"):
             server.send_message_to_all("Normal")
         else:
-                server.send_message_to_all("NO")
+            server.send_message_to_all("NO")
 
     def run(self):
         print("开启线程： " + self.name)

@@ -10,36 +10,45 @@ def camera():
     # 使用笔记本自带的是0
     cap = cv2.VideoCapture(0)
     # 使用第二个USB相机是2
-    cap = cv2.VideoCapture(2)
-
-
-
+    # cap = cv2.VideoCapture(2)
+    invasion_subsys_name_pipe = "/home/xuliang/pipe"
+    try:
+        # os.unlink(invasion_subsys_name_pipe)
+        os.mkfifo(invasion_subsys_name_pipe, 0o644)
+    except OSError:
+        pass
+    # 读取这个管道文件
+    invasion_subsys_fh = os.open(invasion_subsys_name_pipe, os.O_WRONLY)
+    count = 0
     while True:
         # 从摄像头读取图片
         sucess, img = cap.read()
         sucess, img = cap.read()
+        count = count + 1
+        print("正在获取第"+str(count)+"帧。")
         # print(img)
         # print(type(img))
         # img = np.asarray(img).reshape(1920,1080,1)
         # print(img)
         # print(type(img))
-        # frame = cv2.resize(img, (1920, 1080))
+        frame = cv2.resize(img, (1920, 1080))
 
         # 转为灰度图片
         # gray=cv2.cvtColor(img,cv2.COLOR_BGR2GRAY)
         # 显示摄像头，背景是灰度。
-        cv2.imshow("img", img)
+        # cv2.imshow("img", img)
         # 保持画面的持续。
-        k = cv2.waitKey(1)
-        if k == 27:
-            # 通过esc键退出摄像
-            cv2.destroyAllWindows()
-            break
-        elif k == ord("s"):
-            # 通过s键保存图片，并退出。
-            cv2.imwrite("image2.jpg", img)
-            cv2.destroyAllWindows()
-            break
+        os.write(invasion_subsys_fh, frame.tobytes())
+        # k = cv2.waitKey(1)
+        # if k == 27:
+        #     # 通过esc键退出摄像
+        #     cv2.destroyAllWindows()
+        #     break
+        # elif k == ord("s"):
+        #     # 通过s键保存图片，并退出。
+        #     cv2.imwrite("image2.jpg", img)
+        #     cv2.destroyAllWindows()
+        #     break
     # 关闭摄像头
     cap.release()
 if __name__=='__main__':

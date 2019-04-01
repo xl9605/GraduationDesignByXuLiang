@@ -1,0 +1,3 @@
+/home/xuliang/Desktop/GitRepository/GitHubByxl9605/GraduationDesignByXuLiang/server_stream/cmake-build-debug/CMakeFiles/rebuild_cache.dir
+/home/xuliang/Desktop/GitRepository/GitHubByxl9605/GraduationDesignByXuLiang/server_stream/cmake-build-debug/CMakeFiles/edit_cache.dir
+/home/xuliang/Desktop/GitRepository/GitHubByxl9605/GraduationDesignByXuLiang/server_stream/cmake-build-debug/CMakeFiles/server_ffmpeg.dir
