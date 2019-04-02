@@ -1,0 +1,228 @@
+<!doctype html>
+<html lang="en" class="no-js">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>配电站-监控</title>
+    <link rel="stylesheet" href="extras/css/global.css">
+    <link rel="stylesheet" href="bootstrap/css/bootstrap.css">
+    <link rel="stylesheet" href="extras/font-awesome/css/font-awesome.min.css">
+    <link rel="stylesheet" href="extras/fonts/iconfont.css">
+    <link rel="stylesheet" href="extras/css/addClass.css">
+    <!-- HTML5 shim and Respond.js IE8 support of HTML5 elements and media queries -->
+    <!--[if lt IE 9]>
+    <script src="http://cdn.bootcss.com/html5shiv/3.7.3/html5shiv.min.js"></script>
+    <script src="http://cdn.bootcss.com/respond.js/1.4.2/respond.min.js"></script>
+    <![endif]-->
+</head>
+
+<body>
+    <audio id="ddsound" hidden="hidden" src="extras/source/alert.mp3"></audio>
+
+    <script type="text/javascript">
+    function mytime() {
+    if(shouldF == 1)
+    {
+    var bufferImage = new Image();
+    bufferImage.src = "./Pics/draw/"+FileName+"_draw.png?"+ parseInt(Math.random() * (26 - 4 + 1) + 10, 10);
+    document.getElementById("showImage").src = bufferImage.src //"./Pics/show.png?" + parseInt(Math.random() * (26 - 4 + 1) + 10, 10);
+    }
+    }
+    function ChangeColor() {
+    var obj = document.getElementById("alertBackground");
+    obj.style.backgroundColor= "darkorange";
+    }
+    function ChangeUnsafeColor() {
+    var obj = document.getElementById("unsafeAlertBackground");
+    }
+    function ChangeImgSucc() {
+    var bufferImage = new Image();
+    bufferImage.src = "./Pics/show2.png";//+ parseInt(Math.random() * (26 - 4 + 1) + 10, 10);
+    document.getElementById("showImage").src = bufferImage.src; //"./Pics/show.png?" + parseInt(Math.random() * (26 - 4 + 1) + 10, 10);
+    }
+    function ChangeImgNone() {
+    var bufferImage = new Image();
+    bufferImage.src = "./Pics/show.png";//+ parseInt(Math.random() * (26 - 4 + 1) + 10, 10);
+    document.getElementById("showImage").src = bufferImage.src; //"./Pics/show.png?" + parseInt(Math.random() * (26 - 4 + 1) + 10, 10);
+    }
+    function ChangeColorBack() {
+    var obj = document.getElementById("alertBackground");
+    obj.style.backgroundColor= "darkturquoise";}
+    function playSound() {
+        document.getElementById("ddsound").play();
+    }
+    function WebSocketTest() {
+        if ("WebSocket" in window) {
+            var ws = new WebSocket("ws://10.41.0.213:9002/");
+
+            var psafe = document.getElementById("cur-safe-res");
+            var punsafe = document.getElementById("cur-unsafe-res");
+            var his = document.getElementById("his-res");
+            ws.onopen = function () {
+                // Web Socket 已连接上，使用 send() 方法发送数据
+                //   ws.send(new Date().getTime());
+                ws.send("opened on client");
+            };
+
+            ws.onmessage = function (evt) {
+                console.log(evt.data);
+
+                if (evt.data.slice(-17,-11)  == "人着装不规范") {
+                shouldF = 1;
+                    FileName = evt.data.slice(-11,-1);
+                    ChangeColor();
+                    ChangeUnsafeColor();
+                    var ss = evt.data.slice(-19,-11);
+                    psafe.innerHTML = ss;
+
+                }else if (evt.data == "检测合格！")
+                {
+                shouldF = 0;
+                ChangeImgSucc();
+                ChangeColorBack();
+                var ss = evt.data.split('&');
+                psafe.innerHTML = ss[0];
+                }else if (evt.data == "未检测到人\n")
+                {
+                shouldF = 0;
+                ChangeImgNone();
+                ChangeColorBack();
+                var ss = evt.data.split('&');
+                psafe.innerHTML = ss[0];
+                }else {
+                shouldF = 1;
+                    ChangeColorBack();
+                    var ss = evt.data.split('&');
+                    psafe.innerHTML = ss[0];
+                }
+            };
+
+            ws.onclose = function () {
+                his.value += "无法连接服务器...\n";
+                // alert("closed on client");
+            };
+        }
+
+        else {
+            alert("Browser does not support WebSocket!");
+        }
+    }
+    window.onload = function(){
+        var FileName = 1111111111;
+        var shouldF = 0;
+        console.log(FileName);
+        WebSocketTest();
+        setInterval(mytime, 500);
+    }
+    </script>
+    <div class="headertop">
+        <div class="header-logo">
+            <img src="extras/images/logo.png" /> </div>
+    </div>
+    <div class="main-box" style="padding-top:60px;">
+        <div class="jumbotron btn btn-outline-info" style="background:transparent; width: 1824px; height: 120px; margin: 20px 20px;">
+            <h1 class="display-5" style= "margin: -20px 40px;">安全作业智能预警系统-<i>操作人员安全工具智能监测与预警子系统</i></h1>
+        </div>
+<div class="zsuo-map">
+
+            <div class="zsuo-map-box zsuo-map-left" style=" border:none；">
+                <div id="alertBackground" class=" d-flex align-items-center h-25" style="background-color: darkturquoise;overflow:hidden"  role="alert">
+                    <p id="cur-safe-res" class="w-100 text-center" style = "color:white;font-size:65px">
+
+                    </p>
+                </div>
+                <img id="showImage" src="./Pics/show.png" class="img-fluid" alt="Responsive image">
+
+                <!-- <img src="extras/images/map1.png" /> -->
+            </div>
+
+            <div class="zsuo-map-box zsuo-map-right">
+                <video id="video-player"></video>
+                <!-- <img src="extras/images/map2.png" /> -->
+            </div>
+ 
+        </div>
+    </div>
+
+    <script src="extras/js/jquery-2.1.4.js"></script>
+    <script src="bootstrap/js/bootstrap.js"></script>
+
+    <script src="extras/js/swfobject.js"></script>
+
+
+    <!--必须的的-->
+    <script type="text/javascript">
+        $(function () {
+            default_stream_address = "rtmp://10.41.0.213:1935/hls/livestream_helmet";
+            playLiveChannel(default_stream_address);
+            $("#form_button").click(function () {
+                var msg = $("#msg");
+                var stream_address = $('input[name="stream_address"] ').val();
+                if (stream_address == "") {
+                    $('#stream_address ').css("border", "1px #ff0000 solid");
+                    msg.text("请输入媒体流地址");
+                    msg.addClass("warning");
+                    return false;
+                } else {
+                    $('#stream_address').css("border", "1px #ff00ff solid");
+                    msg.text("");
+                    msg.removeClass("warning");
+                }
+                $('#stream_address_code ').html("\"" + stream_address + "\"");
+                playLiveChannel(stream_address);
+            });
+        });
+
+        var $URL = "./SWF/";
+        function playLiveChannel(src) {
+            var swfPlayer = new SWFPlayer("video-container", "video-player", "1084", "620", "");
+            swfPlayer.reload(src);
+        }
+
+        var SWFPlayer = function (_parent_id, _player_id, _width, _height, _poster) {
+            var parent_id = _parent_id;
+            var player_id = _player_id;
+            var width = _width;
+            var height = _height;
+            var poster = _poster;
+
+            function createPlayer(src) {
+                var parameters = {
+                    src: src,
+                    autoPlay: "true",
+                    verbose: "true",
+                    volume: "100",
+                    controlBarAutoHide: "true",
+                    controlBarPosition: "bottom",
+                    poster: poster,
+                    plugin_hls: $URL + "HLSDynamicPlugin.swf"
+                };
+                swfobject.embedSWF(
+                    $URL + "StrobeMediaPlayback.swf"
+                    , player_id
+                    , width
+                    , height
+                    , "11"
+                    , $URL + "expressInstall.swf"
+                    , parameters
+                    , {
+                        allowFullScreen: "true",
+                        quality: "medium",
+                        wmode: "transparent"
+                    }
+                    , {
+                        name: player_id
+                    }
+                );
+            };
+            createPlayer("");
+            this.reload = function (src) {
+                createPlayer(src);
+            };
+        };
+
+    </script>
+</body>
+
+</html>

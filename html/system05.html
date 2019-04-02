@@ -1,0 +1,363 @@
+<!doctype html>
+<html lang="en" class="no-js">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>配电站-监控</title>
+    <link rel="stylesheet" href="eextras/css/global.css">
+    <link rel="stylesheet" href="bootstrap/css/bootstrap.css">
+    <link rel="stylesheet" href="eextras/font-awesome/css/font-awesome.min.css">
+    <link rel="stylesheet" href="eextras/fonts/iconfont.css">
+    <link rel="stylesheet" href="eextras/css/addClass.css">
+    <!-- HTML5 shim and Respond.js IE8 support of HTML5 elements and media queries -->
+    <!--[if lt IE 9]>
+    <script src="http://cdn.bootcss.com/html5shiv/3.7.3/html5shiv.min.js"></script>
+    <script src="http://cdn.bootcss.com/respond.js/1.4.2/respond.min.js"></script>
+    <![endif]-->
+    <style type="text/css" media="screen">#video-player-IPC1 {visibility: visible;margin-top:-25px;}</style>
+</head>
+
+<body>
+    <!-- <audio id="ddsound" hidden="hidden" src="eextras/source/alert.mp3"></audio>
+    <audio id="weigui" hidden="hidden" src="eextras/source/alert.mp3"></audio> -->
+    <audio id="nopower" hidden="hidden" src="eextras/source/nopower.mp3"></audio>
+    <audio id="feiquanxian" hidden="hidden" src="eextras/source/feiquanxian.mp3"></audio>
+    <audio id="next" hidden="hidden" src="eextras/source/next.mp3"></audio>
+    <audio id="jiange" hidden="hidden" src="eextras/source/jiange.mp3"></audio>
+    <audio id="weigui" hidden="hidden" src="eextras/source/weigui.mp3"></audio>
+
+    <script type="text/javascript">
+    //function mytime() {
+  //  var bufferImage = new Image();
+  //  bufferImage.src = "./Pics/draw/"+FileName+"_draw.png?"+ parseInt(Math.random() * (26 - 4 + 1) + 10, 10);
+   // document.getElementById("showImage").src = bufferImage.src //"./Pics/show.png?" + parseInt(Math.random() * (26 - 4 + 1) + 10, 10);
+   // }
+    var wsIPC1 = new WebSocket("ws://127.0.0.1:9001/");
+    var bingoFlag=new Boolean();
+    bingoFlag = false;
+    var wsIPC2 = new WebSocket("ws://127.0.0.1:9002/");
+    function ChangeTextColor(divname,color) {
+        var obj = document.getElementById(divname);
+        obj.style.backgroundColor= color;
+    }
+    function ChangeUnsafeColor() {
+    var obj = document.getElementById("unsafeAlertBackground");
+    obj.style.backgroundColor= "darkorange";
+    obj.className = "alert alert-info";
+    }
+    function ChangeColorBack() {
+    var obj = document.getElementById("alertBackground");
+    obj.style.backgroundColor= "darkturquoise";}
+    function playSound() {
+        document.getElementById("ddsound").play();
+    }
+    function ChangeColorBack() {
+    var obj = document.getElementById("alertBackground");
+    obj.style.backgroundColor= "darkturquoise";}
+    function playSound() {
+        document.getElementById("ddsound").play();
+    }
+    function WebSocketTestIPC2() {
+        if ("WebSocket" in window) {
+            wsIPC2.onopen = function () {
+                // Web Socket 已连接上，使用 send() 方法发送数据
+                //   ws.send(new Date().getTime());
+                wsIPC2.send("opened on client");
+            };
+            wsIPC2.onclose = function () {
+                his.value += "无法连接服务器...\n";
+                WebSocketTestIPC2();
+                // alert("closed on client");
+            };
+        }
+
+        else {
+            alert("Browser does not support WebSocket!");
+        }
+    }
+    function IPC2WebSocketSendMessage(){
+        var psafe = document.getElementById("cur-safe-res");
+        var punsafe = document.getElementById("cur-unsafe-res-IPC2");
+        var his = document.getElementById("his-res");
+        wsIPC2.send("opened on client");
+        wsIPC2.onmessage = function (evt) {
+            console.log(evt.data);
+            punsafe.innerHTML = evt.data;
+            if (evt.data  == "YES") {
+                punsafe.innerHTML = "机柜维修中";
+                ChangeTextColor("cur-unsafe-res-IPC2","green");
+                if(bingoFlag == false)
+                    bofang("next");
+                bingoFlag = true;
+
+            } else if (evt.data  == "Normal") {
+                punsafe.innerHTML = "等待维修";
+                ChangeTextColor("cur-unsafe-res-IPC2","");
+                bingoFlag = false;
+            }else{
+                punsafe.innerHTML = "非权限人员，请勿解锁操作";
+                ChangeTextColor("cur-unsafe-res-IPC2","red");
+                bofang("feiquanxian");
+                bingoFlag = false;
+            }
+        };
+    }
+    
+    function WebSocketTestIPC1() {
+        if ("WebSocket" in window) {
+            wsIPC1.onopen = function () {
+                // Web Socket 已连接上，使用 send() 方法发送数据
+                //   ws.send(new Date().getTime());
+                wsIPC1.send("opened on client");
+            };
+            wsIPC1.onclose = function () {
+                his.value += "无法连接服务器...\n";
+                // alert("closed on client");
+            };
+        }
+        else {
+            alert("Browser does not support WebSocket!");
+        }
+    }
+    function IPC1WebSocketSendMessage(){
+        var psafe = document.getElementById("cur-safe-res");
+        var punsafe = document.getElementById("cur-unsafe-res-IPC1");
+        var his = document.getElementById("his-res");
+        wsIPC1.send("opened on client");
+        wsIPC1.onmessage = function (evt) {
+                console.log(evt.data);
+                if (evt.data  == "Normal") {
+                    punsafe.innerHTML = "机柜正常";
+                    ChangeTextColor("cur-unsafe-res-IPC1","");
+
+                } else if (evt.data  == "JianGe"){
+                    punsafe.innerHTML = "错误的操作间隔，请核对工作间隔";
+                    bofang("jiange");
+                    ChangeTextColor("cur-unsafe-res-IPC1","red");
+                }else if (evt.data  == "NoPower"){
+                    punsafe.innerHTML = "非权限人员，请勿解锁操作";
+                    ChangeTextColor("cur-unsafe-res-IPC1","red");
+                    bofang("feiquanxian");
+                    bingoFlag = false;
+                }
+            };
+    }
+    window.onload = function(){
+        var FileName = 1111111111;
+        console.log(FileName);
+        WebSocketTestIPC1();
+        setInterval(IPC1WebSocketSendMessage, 500);
+        WebSocketTestIPC2();
+        setInterval(IPC2WebSocketSendMessage, 500);
+    }
+    function bofang(soundname){
+          var audio = document.getElementById(soundname);
+          audio.play();
+    }
+    </script>
+    <div class="headertop">
+        <div class="header-logo">
+            <img src="eextras/images/logo_01.png" /> </div>
+          <!--<div class="header-right2">
+              <h2 id="state-now">静止</h2>
+         </div>
+         <div class="header-right">
+              <h1>动作：</h1>
+         </div> -->
+         
+    </div>
+    <div class="main-box" style="padding-top:60px;">
+        <div class="btn btn-outline-info" style="background:transparent; width: 1824px; height: 130px; margin: 20px 20px;">       
+              <p id="state-now" style = "font-size: 60px;">安全作业智能预警系统-<small>CDS智能监测与预警子系统</small></p>
+        </div>
+<div class="zsuo-map">
+
+            <!--<div class="zsuo-map-box zsuo-map-left" style=" border:none；">
+
+                <div height:150px;" role="alert">
+                    <prtmp://localhost:1935/rtmplive/demo/p>
+
+                </div>rtmp://localhost:1935/rtmplive/demo
+
+
+                <img src="eextras/images/map1.png" /> 
+
+            </div>-->
+            <div class="zsuo-map-box zsuo-map-left">
+
+                <video id="video-player-IPC1"></video>
+                <!-- <img src="eextras/images/map2.png" />-->  
+                <div class="warning" id="warring1" style="background-color: transparent;height=80px;" role="alert">
+                    <p id="cur-unsafe-res-IPC1" style = "color:white;font-size:50px;"> 正常状态
+
+                </div>
+            </div> 
+
+            <div class="zsuo-map-box zsuo-map-right">
+	
+    <object name="video-player-IPC2" width="840" height="620" id="video-player-IPC2" type="application/x-shockwave-flash" data="./SWF/StrobeMediaPlayback.swf" style="visibility: visible;margin-top:-25px;"><param name="allowFullScreen" value="true"><param name="quality" value="medium"><param name="wmode" value="transparent">
+        <param name="flashvars" value="src=rtmp://localhost:1935/hls/IPC2_Video&amp;autoPlay=true&amp;verbose=true&amp;volume=100&amp;controlBarAutoHide=true&amp;controlBarPosition=bottom&amp;poster=&amp;plugin_hls=./SWF/HLSDynamicPlugin.swf"></object>
+                <!-- <img src="eextras/images/map2.png" /> -->
+                <div class="warning" id="warring2" style="background-color: transparent;height=80px;" role="alert">
+                    <p id="cur-unsafe-res-IPC2" style = "color:white;font-size:50px;"> 正常状态
+                </div>
+            </div>
+            •••••••••••••
+        </div>
+    </div>
+
+    <script src="eextras/js/jquery-2.1.4.js"></script>
+    <script src="bootstrap/js/bootstrap.js"></script>
+
+    <script src="eextras/js/swfobject.js"></script>
+
+
+
+ <!--必须的的-->
+    <script type="text/javascript">
+        $(function () {
+            default_stream_address = "rtmp://localhost:1935/hls/IPC2_Video";
+            playLiveChannel(default_stream_address);
+            $("#form_button").click(function () {
+                var msg = $("#msg");
+                var stream_address = $('input[name="stream_address"] ').val();
+                if (stream_address == "") {
+                    $('#stream_address ').css("border", "1px #ff0000 solid");
+                    msg.text("请输入媒体流地址");
+                    msg.addClass("warning");
+                    return false;
+                } else {
+                    $('#stream_address').css("border", "1px #ff00ff solid");
+                    msg.text("");
+                    msg.removeClass("warning");
+                }
+                $('#stream_address_code ').html("\"" + stream_address + "\"");
+                playLiveChannel(stream_address);
+            });
+        });
+
+        var $URL = "./SWF/";
+        function playLiveChannel(src) {
+            var swfPlayer = new SWFPlayer("video-container", "video-player-IPC2", "840", "620", "");
+            swfPlayer.reload(src);
+        }
+
+        var SWFPlayer = function (_parent_id, _player_id, _width, _height, _poster) {
+            var parent_id = _parent_id;
+            var player_id = _player_id;
+            var width = _width;
+            var height = _height;
+            var poster = _poster;
+
+            function createPlayer(src) {
+                var parameters = {
+                    src: src,
+                    autoPlay: "true",
+                    verbose: "true",
+                    volume: "100",
+                    controlBarAutoHide: "true",
+                    controlBarPosition: "bottom",
+                    poster: poster,
+                    plugin_hls: $URL + "HLSDynamicPlugin.swf"
+                };
+                swfobject.embedSWF(
+                    $URL + "StrobeMediaPlayback.swf"
+                    , player_id
+                    , width
+                    , height
+                    , "11"
+                    , $URL + "expressInstall.swf"
+                    , parameters
+                    , {
+                        allowFullScreen: "true",
+                        quality: "medium",
+                        wmode: "transparent"
+                    }
+                    , {
+                        name: player_id
+                    }
+                );
+            };
+            createPlayer("");
+            this.reload = function (src) {
+                createPlayer(src);
+            };
+        };
+
+    </script>
+    <!--必须的的-->
+    <script type="text/javascript">
+        $(function () {
+            default_stream_address = "rtmp://localhost:1935/hls/IPC1_Video";
+            playLiveChannel(default_stream_address);
+            $("#form_button").click(function () {
+                var msg = $("#msg");
+                var stream_address = $('input[name="stream_address"] ').val();
+                if (stream_address == "") {
+                    $('#stream_address ').css("border", "1px #ff0000 solid");
+                    msg.text("请输入媒体流地址");
+                    msg.addClass("warning");
+                    return false;
+                } else {
+                    $('#stream_address').css("border", "1px #ff00ff solid");
+                    msg.text("");
+                    msg.removeClass("warning");
+                }
+                $('#stream_address_code ').html("\"" + stream_address + "\"");
+                playLiveChannel(stream_address);
+            });
+        });
+
+        var $URL = "./SWF/";
+        function playLiveChannel(src) {
+            var swfPlayer = new SWFPlayer("video-container", "video-player-IPC1", "840", "620", "");
+            swfPlayer.reload(src);
+        }
+
+        var SWFPlayer = function (_parent_id, _player_id, _width, _height, _poster) {
+            var parent_id = _parent_id;
+            var player_id = _player_id;
+            var width = _width;
+            var height = _height;
+            var poster = _poster;
+
+            function createPlayer(src) {
+                var parameters = {
+                    src: src,
+                    autoPlay: "true",
+                    verbose: "true",
+                    volume: "100",
+                    controlBarAutoHide: "true",
+                    controlBarPosition: "bottom",
+                    poster: poster,
+                    plugin_hls: $URL + "HLSDynamicPlugin.swf"
+                };
+                swfobject.embedSWF(
+                    $URL + "StrobeMediaPlayback.swf"
+                    , player_id
+                    , width
+                    , height
+                    , "11"
+                    , $URL + "expressInstall.swf"
+                    , parameters
+                    , {
+                        allowFullScreen: "true",
+                        quality: "medium",
+                        wmode: "transparent"
+                    }
+                    , {
+                        name: player_id
+                    }
+                );
+            };
+            createPlayer("");
+            this.reload = function (src) {
+                createPlayer(src);
+            };
+        };
+
+    </script>
+</body>
+
+</html>

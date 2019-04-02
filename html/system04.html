@@ -1,0 +1,302 @@
+<!doctype html>
+<html lang="en" class="no-js">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>配电站-监控</title>
+    <link rel="stylesheet" href="extras/css/global.css">
+    <link rel="stylesheet" href="bootstrap/css/bootstrap.css">
+    <link rel="stylesheet" href="extras/font-awesome/css/font-awesome.min.css">
+    <link rel="stylesheet" href="extras/fonts/iconfont.css">
+    <link rel="stylesheet" href="extras/css/addClass.css">
+    <!-- HTML5 shim and Respond.js IE8 support of HTML5 elements and media queries -->
+    <!--[if lt IE 9]>
+    <script src="http://cdn.bootcss.com/html5shiv/3.7.3/html5shiv.min.js"></script>
+    <script src="http://cdn.bootcss.com/respond.js/1.4.2/respond.min.js"></script>
+    <![endif]-->
+</head>
+
+<body>
+    <audio id="ddsound" hidden="hidden" src="extras/source/alert.mp3"></audio>
+
+    <script type="text/javascript">
+        var default_stream_address = "rtmp://10.41.0.147:1935/hls/livestream";
+        function getNowFormatDate() {
+            var date = new Date();
+            var seperator1 = "-";
+            var seperator2 = ":";
+            var month = date.getMonth() + 1;
+            var strDate = date.getDate();
+            if (month >= 1 && month <= 9) {
+                month = "0" + month;
+            }
+            if (strDate >= 0 && strDate <= 9) {
+                strDate = "0" + strDate;
+            }
+            var currentdate = date.getFullYear() + seperator1 + month + seperator1 + strDate
+                + " " + date.getHours() + seperator2 + date.getMinutes()
+                + seperator2 + date.getSeconds();
+
+            document.getElementById("m_time").innerText = currentdate;
+            document.getElementById("m_lead").innerText = currentdate;
+
+            return currentdate;
+        }
+    </script>
+
+    <script src="extras/js/jquery-2.1.4.js"></script>
+    <script src="bootstrap/js/bootstrap.js"></script>
+    <script src="extras/js/swfobject.js"></script>
+
+    <div class="headertop">
+        <div class="header-logo">
+            <img src="extras/images/logo.png" />
+        </div>
+    </div>
+
+    <div class="main-box" style="padding-top:60px;">
+
+        <div class="jumbotron btn btn-outline-info" style="background:transparent; width: 1824px; height: 222px; margin: 20px 20px;">
+            <button onclick="sendIP(this)" name="Camera_Button" id="bt1" type="button" class="h-100 btn btn-outline-info" style="width:14%"
+                value="192.168.0.201">192.168.0.201</button>
+            <button onclick="sendIP(this)" name="Camera_Button" id="bt2" type="button" class="h-100 btn btn-outline-info" style="width:14%"
+                value="192.168.0.202">192.168.0.202</button>
+            <button onclick="sendIP(this)" name="Camera_Button" id="bt3" type="button" class="h-100 btn btn-outline-info" style="width:14%"
+                value="192.168.0.103">192.168.0.103</button>
+            <button onclick="sendIP(this)" name="Camera_Button" id="bt4" type="button" class="h-100 btn btn-outline-info" style="width:14%"
+                value="192.168.0.104">192.168.0.104</button>
+            <button onclick="sendIP(this)" name="Camera_Button" id="bt2" type="button" class="h-100 btn btn-outline-info" style="width:14%"
+                value="192.168.0.105">192.168.0.105</button>
+            <button onclick="sendIP(this)" name="Camera_Button" id="bt3" type="button" class="h-100 btn btn-outline-info" style="width:14%"
+                value="192.168.0.106">192.168.0.106</button>
+            <button onclick="sendIP(this)" name="Camera_Button" id="bt4" type="button" class="h-100 btn btn-outline-info" style="width:14%"
+                value="192.168.0.107">192.168.0.107</button>
+        </div>
+
+        <div class="zsuo-map">
+
+            <div class="zsuo-map-box zsuo-map-right">
+
+                <img id="person_image" src="./data/a1.png" class="img-fluid" alt="Responsive image">
+            </div>
+
+            <div class="zsuo-map-box zsuo-map-left">
+                <span class="zsuo-jiao zs-jiao1"></span>
+                <span class="zsuo-jiao zs-jiao2"></span>
+                <span class="zsuo-jiao zs-jiao3"></span>
+                <span class="zsuo-jiao zs-jiao4"></span>
+
+                <video class="w-100" id="video-player"></video>
+
+                <div class="panel panel-primary" style="background-color: transparent">
+                    <div class="panel-heading">
+                        <h3 class="p-3 mb-2 bg-info text-white panel-title">检测结果</h3>
+                    </div>
+                    <div class="panel-body">
+                        <div id="danger_div" class="modal-dialog" role="document">
+                            <div class="modal-content">
+                                <div class="modal-header bg-danger text-white">
+                                    <h5 class="modal-title text-uppercase">侦测到可疑人员</h5>
+                                </div>
+                                <div class="modal-body bg-danger text-white">
+
+                                    <li class="media">
+                                        <img id="face_image" class="mr-3" src="extras/images/unknow.jpeg" style="width:96px;height:96px;" alt="Generic placeholder image">
+                                        <div class="media-body text-uppercase text-right">
+                                            <br>
+                                            <h5 class="mt-0 mb-1">未知人员</h5>
+                                            <p>
+                                                可疑度:30%
+                                                <br>
+
+                                                <span id="m_time"></span>
+                                            </p>
+                                        </div>
+                                    </li>
+                                </div>
+                                <div class="modal-footer bg-danger">
+                                    <button type="button" class="btn btn-outline-light btn-block" data-dismiss="modal">确认</button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+
+    <script>
+        var counter = 0;
+        function mytime() {
+            document.getElementById("person_image").src = "./data/a" + counter++ % 7 + ".png?" + parseInt(Math.random() * (26 - 4 + 1) + 10, 10);
+            document.getElementById("face_image").src = "./data/Face/f" + counter++ % 7 + ".png?" + parseInt(Math.random() * (26 - 4 + 1) + 10, 10);
+        }
+    </script>
+
+
+
+
+    <script type="text/javascript">
+        var ws = new WebSocket("ws://127.0.0.1:9998/");
+        function modelToogle() {
+            //console.log("model show")
+            $('#exampleModalCenter').modal({ backdrop: 'static', keyboard: false })
+        }
+        function sendIP(camera_button) {
+            ws.send(camera_button.innerText);
+        }
+        function playSound() {
+            document.getElementById("ddsound").play();
+        }
+        function WebSocketTest() {
+
+            if ("WebSocket" in window) {
+                var bs = document.getElementsByName("Camera_Button");
+                // var r = /^[0-9]*$/;
+
+                // var psafe = document.getElementById("cur-safe-res");
+                // var punsafe = document.getElementById("cur-unsafe-res");
+                var his = document.getElementById("his-res");
+                ws.onopen = function () {
+                    ws.send("opened on client");
+                };
+
+                ws.onmessage = function (evt) {
+
+
+                    if (evt.data == "danger") {
+                        document.getElementById("danger_div").style.visibility = "visible";
+                        getNowFormatDate();
+                        playSound();
+                        modelToogle();
+                    }
+                    else if (evt.data == "safe") {
+                        document.getElementById("danger_div").style.visibility = "hidden";
+                        for (i = 0; i < bs.length; i++) {
+                            bs[i].className = "h-100 btn btn-outline-info";
+                        }
+                    }
+                    else {
+
+                        for (i = 0; i < bs.length; i++) {
+                            if (bs[i].value == evt.data) {
+                                bs[i].className = "h-100 btn btn-outline-warning";
+                                ws.send(bs[i].value);
+                                //console.log("now playing " + bs[i].value)
+                            }
+                        }
+                        // his.value += evt.data;
+                        his.scrollTop = his.scrollHeight;
+
+                        // var ss = evt.data.split('&');
+                        // psafe.innerHTML = ss[0];
+                        // punsafe.innerHTML = ss[1];
+                    }
+                };
+
+                ws.onclose = function () {
+                    his.value += "Server disconnect...\n";
+                };
+            }
+            else {
+                alert("Browser does not support WebSocket!");
+            }
+        }
+        window.onload = function () {
+            WebSocketTest();
+            setInterval(mytime, 500); //mytime是方法，1000表示每1秒执行一次
+            document.getElementById("danger_div").style.visibility = "hidden";
+        }
+    </script>
+
+
+
+    <script type="text/javascript">
+
+        $(function () {
+            playLiveChannel(default_stream_address);
+        });
+
+        var $URL = "./SWF/";
+        function playLiveChannel(src) {
+            var swfPlayer = new SWFPlayer("video-container", "video-player", "542", "310", "");
+            swfPlayer.reload(src);
+        }
+
+        var SWFPlayer = function (_parent_id, _player_id, _width, _height, _poster) {
+            var parent_id = _parent_id;
+            var player_id = _player_id;
+            var width = _width;
+            var height = _height;
+            var poster = _poster;
+
+            function createPlayer(src) {
+                var parameters = {
+                    src: src,
+                    autoPlay: "true",
+                    verbose: "true",
+                    volume: "100",
+                    controlBarAutoHide: "true",
+                    controlBarPosition: "bottom",
+                    poster: poster,
+                    plugin_hls: $URL + "HLSDynamicPlugin.swf"
+                };
+                swfobject.embedSWF(
+                    $URL + "StrobeMediaPlayback.swf"
+                    , player_id
+                    , width
+                    , height
+                    , "11"
+                    , $URL + "expressInstall.swf"
+                    , parameters
+                    , {
+                        allowFullScreen: "true",
+                        quality: "medium",
+                        wmode: "transparent"
+                    }
+                    , {
+                        name: player_id
+                    }
+                );
+            };
+
+            createPlayer("");
+            this.reload = function (src) {
+                createPlayer(src);
+            };
+        };
+    </script>
+
+    <div class="modal fade" id="exampleModalCenter" tabindex="-1" role="dialog" aria-labelledby="exampleModalCenterTitle" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered" role="document">
+            <div class="modal-content">
+                <div class="modal-header bg-info">
+                    <h5 class="modal-title text-uppercase text-white" id="exampleModalLongTitle">侦测到可疑人员</h5>
+                </div>
+                <div class="modal-body bg-danger text-white">
+
+                    <li class="media">
+                        <img class="mr-3" src="extras/images/unknow.jpeg" alt="Generic placeholder image">
+                        <div class="media-body text-uppercase text-right">
+                            <h5 class="mt-0 mb-1">未知人员</h5>
+                            <p>
+                                可疑度:30%
+                                <br>
+
+                                <span id="m_time"></span>
+                            </p>
+                        </div>
+                    </li>
+                </div>
+                <div class="modal-footer bg-info">
+                    <script>getNowFormatDate();</script>
+                    <button type="button" class="btn btn-outline-light btn-block" data-dismiss="modal">确认</button>
+                </div>
+            </div>
+        </div>
+    </div>
+</body>
+
+</html>
