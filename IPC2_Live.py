@@ -1,4 +1,4 @@
-#!/usr/bin/env python３
+#!/usr/bin/env python3
 
 import time
 start = time.time()
