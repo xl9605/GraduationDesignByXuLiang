@@ -1,7 +1,6 @@
-#!/usr/bin/env python2
+#!/usr/bin/env python３
 
 import time
-import os
 start = time.time()
 import argparse
 import cv2
@@ -10,43 +9,55 @@ import pickle
 import sys
 import numpy as np
 np.set_printoptions(precision=2)
-from sklearn.mixture import GMM
-import openface
-import threading
-from websocket_server import WebsocketServer
-DETECTION_WIDTH = 480
-DETECTION_HEIGHT = 270
-cam_dect_name = None
-cam_confidences = None
-fileDir = os.path.dirname(os.path.realpath(__file__))
-modelDir = os.path.join(fileDir, '', 'models')
-dlibModelDir = os.path.join(modelDir, 'dlib')
-openfaceModelDir = os.path.join(modelDir, 'openface')
 import dlib
 detector = dlib.get_frontal_face_detector()
+from sklearn.mixture import GMM
+import openface
+import pdb
+import threading
+import time
+from websocket_server import WebsocketServer
+# 识别的BoundingBox的框的大小，里边存储的就是检测到的人脸框
+DETECTION_WIDTH = 480
+DETECTION_HEIGHT = 270
+# 人脸识别的名字
+cam_dect_name = None
+# 每一次的人脸识别的值
 cam_confidences_count = 0
+# 每三次识别进行一次去平均值
 sum_cam_confidences = 0
+cam_confidences = None
+# 指定当前项目所在目录
+fileDir = os.path.dirname(os.path.realpath(__file__))
+# 指定Dlib以及OpenFace模块所在目录
+modelDir = os.path.join(fileDir, '', 'models')
+# 指定Dlib模块所在目录
+dlibModelDir = os.path.join(modelDir, 'dlib')
+# 指定OpenFace模块所在目录
+openfaceModelDir = os.path.join(modelDir, 'openface')
+
+
 
 
 def getRep(bgrImg):
     start = time.time()
     if bgrImg is None:
         raise Exception("Unable to load image/frame")
+    # 对传入的图片进行颜色转换，转换成RGB格式的图片
     rgbImg = cv2.resize(
         cv2.cvtColor(bgrImg, cv2.COLOR_BGR2RGB), (DETECTION_WIDTH, DETECTION_HEIGHT), interpolation=cv2.INTER_CUBIC)
+    # 对传入的图片进行灰度图片提取
     gray = cv2.resize(
         cv2.cvtColor(bgrImg, cv2.COLOR_BGR2GRAY), (DETECTION_WIDTH, DETECTION_HEIGHT), interpolation=cv2.INTER_CUBIC)
-    if args.verbose:
-        print("  + Original size: {}".format(rgbImg.shape))
-    if args.verbose:
-        print("Loading the image took {} seconds.".format(time.time() - start))
-    start = time.time()
+
+
+    # 用Dlib的"get_frontal_face_detector()"函数进行人脸检测，传入的参数是刚才处理的灰度图片，并不对图片进行向下降采样
     bb = detector(gray, 0)
+
     if bb is None:
         return None
-    if args.verbose:
-        print("Face detection took {} seconds.".format(time.time() - start))
-    start = time.time()
+
+
     alignedFaces = []
     for box in bb:
         alignedFaces.append(
@@ -55,17 +66,14 @@ def getRep(bgrImg):
                 rgbImg,
                 box,
                 landmarkIndices=openface.AlignDlib.OUTER_EYES_AND_NOSE))
+
     if alignedFaces is None:
         raise Exception("Unable to align the frame")
-    if args.verbose:
-        print("Alignment took {} seconds.".format(time.time() - start))
-    start = time.time()
+
     reps = []
     for alignedFace in alignedFaces:
         reps.append(net.forward(alignedFace))
-    if args.verbose:
-        print("Neural network forward pass took {} seconds.".format(
-            time.time() - start))
+
     # print (reps)
     return (reps,bb)
 
@@ -76,7 +84,6 @@ def infer(img, args):
                 (le, clf) = pickle.load(f)  # le - label and clf - classifer
         else:
                 #set_trace()
-
                 (le, clf) = pickle.load(f, encoding='latin1')  # le - label and clf - classifer
 
     repsAndBBs = getRep(img)
@@ -99,9 +106,6 @@ def infer(img, args):
         # print (str(le.inverse_transform(max2)) + ": "+str( predictions [max2]))
         # ^ prints the second prediction
         confidences.append(predictions[maxI])
-        if args.verbose:
-            print("Prediction took {} seconds.".format(time.time() - start))
-            pass
         # print("Predict {} with {:.2f} confidence.".format(person.decode('utf-8'), confidence))
         if isinstance(clf, GMM):
             dist = np.linalg.norm(rep - clf.means_[maxI])
@@ -110,7 +114,9 @@ def infer(img, args):
     return (persons, confidences ,bbs)
 
 
+# 实现通过摄像头采集数据，并且进行人脸识别，同时通过管道技术，将摄像头拍到的图像同步传输到WEB服务端
 def cam_dect():
+    # cam_dect_name存放的是识别到的人的姓名
     global cam_dect_name
     # Capture device. Usually 0 will be webcam and 1 will be usb cam.
     # video_capture = cv2.VideoCapture(args.captureDevice)
@@ -118,19 +124,17 @@ def cam_dect():
     # video_capture.set(4, args.height)
 
     confidenceList = []
-    # set_trace()
 
-    # create named pipe to
-    invasion_subsys_name_pipe = "/tmp/IPC2_Image_Pipe"
+    # 通过管道技创建一个往里面写图片的文件，运用进程间管道通信技术
+    invasion_subsys_name_pipe = "/tmp/IPC1_Image_Pipe"
     try:
         # os.unlink(invasion_subsys_name_pipe)
         os.mkfifo(invasion_subsys_name_pipe)
     except OSError:
         pass
+    # 读取这个管道文件
     invasion_subsys_fh = os.open(invasion_subsys_name_pipe, os.O_WRONLY)
-
-    # 7-15-add
-    # 这一段是调用制作的雄迈的ＩＰＣ的网络摄像头
+    #这一段是调用制作的雄迈的ＩＰＣ的网络摄像头
     # # 7-15-add
     # from xmcext import XMCamera
     # cp = XMCamera("192.168.0.2", 34567, "admin", "ludian@blq", "")
@@ -141,14 +145,12 @@ def cam_dect():
 
     # 调用笔记本内置摄像头，所以参数为0，如果有其他的摄像头可以调整参数为1，2
     # 使用笔记本自带的是0
-    # 使用第二个USB相机是2
     cap = cv2.VideoCapture(0)
     time.sleep(2)
 
     warning_counter = 0
     previous_exist_unknown_person = True
     # 7-15-add
-
     counter = 0
     while True:
         from PIL import Image
@@ -156,17 +158,13 @@ def cam_dect():
         sucess, img = cap.read()
 
         # frame = np.asarray(cp.queryframe('array')).reshape(1080, 1920, 3)
+        # 将摄像头拍到的图像数据重置成1920x1080分辨率
         frame = cv2.resize(img, (1920, 1080))
         # ret, frame = video_capture.read()
-        if(counter%2 ==0):
+        # 每两帧进行一次人脸识别
+        if(counter%2 == 0):
             persons, confidences, bbs = infer(frame, args)
             print("P: " + str(persons) + " C: " + str(confidences))
-            # print(str(confidences))
-            # print(confidences)
-            # if(float(confidences) > 0.85):
-            #     print("YES")
-            # else:
-            #     print("NO")
             cam_dect_name = str(persons)
             try:
                 # append with two floating point precision
@@ -180,12 +178,7 @@ def cam_dect():
                 global cam_confidences
                 cam_confidences = c
 
-            exist_unknown_person = False
 
-            # 7-15-23
-
-            send_safe = ""
-            send_unsafe = ""
             # Print the person name and conf value on the frame next to the person
             # Also print the bounding box
             for idx, person in enumerate(persons):
@@ -195,29 +188,14 @@ def cam_dect():
                 #             (bbs[idx].left() * 4, bbs[idx].bottom() * 4 + 20), cv2.FONT_HERSHEY_SIMPLEX, 0.5,
                 #             (255, 255, 255), 1)
 
-                if persons[idx] == "_unknown":
-                    exist_unknown_person = True
-                    send_unsafe += "{} @{:.2f}".format(person,
-                                                       confidences[idx]) + "\n"
-                else:
-                    send_safe += "{} @{:.2f}".format(person,
-                                                     confidences[idx]) + "\n"
-
-            if exist_unknown_person and previous_exist_unknown_person:
-                warning_counter = warning_counter + 1
-            else:
-                warning_counter = 0
-
-            previous_exist_unknown_person = exist_unknown_person
-
-            # cv2.imshow('', frame)
-            # cv2.waitKey(0)
-
             os.write(invasion_subsys_fh, frame.tobytes())
         else:
             continue
+        # cv2.imshow('', frame)
+        # cv2.waitKey(0)
+
     cv2.destroyAllWindows()
-    cap.close()
+    cp.close()
 
 
 class myThread1(threading.Thread):
@@ -230,23 +208,24 @@ class myThread1(threading.Thread):
     # Called for every client connecting (after handshake)
     def new_client(self, client, server):
         print("New client connected and was given id %d" % client['id'])
-        server.send_message_to_all("Hey all, a new client has joined us")
+        #server.send_message_to_all("Hey all, a new client has joined us")
+        # server.send_message_to_all("YES")
 
     # Called for every client disconnecting
     def client_left(self, client, server):
         print("Client(%d) disconnected" % client['id'])
 
     # Called when a client sends a message
+    # 通过WebSocket与浏览器进行通信
     def message_received(self, client, server, message):
         global cam_dect_name
         global cam_confidences
         if len(message) > 200:
             message = message[:200] + '..'
-        #print("Client(%d) said: %s" % (client['id'], message))
+        # print("Client(%d) said: %s" % (client['id'], message))
         global cam_confidences_count
         global sum_cam_confidences
-        if (cam_dect_name == "[b'renjingsong']" or cam_dect_name == "[b'xieyouliang']"):
-        #if (cam_dect_name == "[b'xuliang']"):
+        if (cam_dect_name == "[b'xuliang']"):
             sum_cam_confidences = sum_cam_confidences + cam_confidences
             cam_confidences_count = cam_confidences_count + 1
             print(cam_confidences_count)
@@ -264,7 +243,7 @@ class myThread1(threading.Thread):
 
     def run(self):
         print("开启线程： " + self.name)
-        PORT = 9002
+        PORT = 9001
         server = WebsocketServer(PORT, '127.0.0.1')
         server.set_fn_new_client(self.new_client)
         server.set_fn_client_left(self.client_left)
@@ -277,7 +256,6 @@ class myThread1(threading.Thread):
         server.run_forever()
         # print ("开启线程： " + self.name)
 
-
 class myThread2(threading.Thread):
     def __init__(self, threadID, name, counter):
         threading.Thread.__init__(self)
@@ -289,59 +267,47 @@ class myThread2(threading.Thread):
         print("开启线程： " + self.name)
         # 获取锁，用于线程同步
         cam_dect()
-        #print_time2(self.name, self.counter, 1)
+        # print_time2(self.name, self.counter, 1)
         threadLock.acquire()
         # 释放锁，开启下一个线程
         threadLock.release()
 
+    def print_time2(threadName, delay, counter):
+        while counter:
+            time.sleep(delay)
+            print("print_time2:%s: %s" % (threadName, time.ctWime(time.time())))
+            counter -= 1
 
-def print_time2(threadName, delay, counter):
-    while counter:
-        time.sleep(delay)
-        print("print_time2:%s: %s" % (threadName, time.ctWime(time.time())))
-        counter -= 1
+    def overlay_transparent(background_img, img_to_overlay_t, x, y, overlay_size=None):
+        """
+        @brief      Overlays a transparant PNG onto another image using CV2
 
+        @param      background_img    The background image
+        @param      img_to_overlay_t  The transparent image to overlay (has alpha channel)
+        @param      x                 x location to place the top-left corner of our overlay
+        @param      y                 y location to place the top-left corner of our overlay
+        @param      overlay_size      The size to scale our overlay to (tuple), no scaling if None
 
-def overlay_transparent(background_img, img_to_overlay_t, x, y, overlay_size=None):
-    """
-    @brief      Overlays a transparant PNG onto another image using CV2
-
-    @param      background_img    The background image
-    @param      img_to_overlay_t  The transparent image to overlay (has alpha channel)
-    @param      x                 x location to place the top-left corner of our overlay
-    @param      y                 y location to place the top-left corner of our overlay
-    @param      overlay_size      The size to scale our overlay to (tuple), no scaling if None
-
-    @return     Background image with overlay on top
-    """
-
-    bg_img = background_img.copy()
-
-    if overlay_size is not None:
-        img_to_overlay_t = cv2.resize(img_to_overlay_t.copy(), overlay_size)
-
-    # Extract the alpha mask of the RGBA image, convert to RGB
-    b, g, r, a = cv2.split(img_to_overlay_t)
-    overlay_color = cv2.merge((b, g, r))
-
-    # Apply some simple filtering to remove edge noise
-    mask = cv2.medianBlur(a, 5)
-
-    h, w, _ = overlay_color.shape
-    roi = bg_img[y:y+h, x:x+w]
-
-    # Black-out the area behind the logo in our original ROI
-    img1_bg = cv2.bitwise_and(roi.copy(), roi.copy(),
-                              mask=cv2.bitwise_not(mask))
-
-    # Mask out the logo from the logo image.
-    img2_fg = cv2.bitwise_and(overlay_color, overlay_color, mask=mask)
-
-    # Update the original image with our new ROI
-    bg_img[y:y+h, x:x+w] = cv2.add(img1_bg, img2_fg)
-
-    return bg_img
-
+        @return     Background image with overlay on top
+        """
+        bg_img = background_img.copy()
+        if overlay_size is not None:
+            img_to_overlay_t = cv2.resize(img_to_overlay_t.copy(), overlay_size)
+        # Extract the alpha mask of the RGBA image, convert to RGB
+        b, g, r, a = cv2.split(img_to_overlay_t)
+        overlay_color = cv2.merge((b, g, r))
+        # Apply some simple filtering to remove edge noise
+        mask = cv2.medianBlur(a, 5)
+        h, w, _ = overlay_color.shape
+        roi = bg_img[y:y + h, x:x + w]
+        # Black-out the area behind the logo in our original ROI
+        img1_bg = cv2.bitwise_and(roi.copy(), roi.copy(),
+                                  mask=cv2.bitwise_not(mask))
+        # Mask out the logo from the logo image.
+        img2_fg = cv2.bitwise_and(overlay_color, overlay_color, mask=mask)
+        # Update the original image with our new ROI
+        bg_img[y:y + h, x:x + w] = cv2.add(img1_bg, img2_fg)
+        return bg_img
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
@@ -361,23 +327,14 @@ if __name__ == '__main__':
             'nn4.small2.v1.t7'))
     parser.add_argument('--imgDim', type=int,
                         help="Default image dimension.", default=96)
-    parser.add_argument(
-        '--captureDevice',
-        type=int,
-        default=0,
-        help='Capture device. 0 for latop webcam and 1 for usb webcam')
-    parser.add_argument('--width', type=int, default=320)
-    parser.add_argument('--height', type=int, default=240)
-    parser.add_argument('--threshold', type=float, default=0.5)
-    parser.add_argument('--cuda', action='store_true', default=True)
-    parser.add_argument('--verbose', action='store_true')
+    parser.add_argument('--cuda', action='store_true', help="Default to use GPU and Cuda.", default=True)
     parser.add_argument(
         '--classifierModel',
         type=str,
         help='The Python pickle representing the classifier. This is NOT the Torch network model, which can be set with --networkModel.',
         default=os.path.join(modelDir,
-            'face',
-            "IPC2_simple.pkl"))
+                             'face',
+                             "IPC1_simple.pkl"))
     args = parser.parse_args()
 
     align = openface.AlignDlib(args.dlibFacePredictor)

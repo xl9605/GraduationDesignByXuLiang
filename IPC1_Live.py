@@ -17,12 +17,15 @@ import pdb
 import threading
 import time
 from websocket_server import WebsocketServer
+# 识别的BoundingBox的框的大小，里边存储的就是检测到的人脸框
 DETECTION_WIDTH = 480
 DETECTION_HEIGHT = 270
+# 人脸识别的名字
 cam_dect_name = None
+# 每一次的人脸识别的值
 cam_confidences_count = 0
+# 每三次识别进行一次去平均值
 sum_cam_confidences = 0
-
 cam_confidences = None
 # 指定当前项目所在目录
 fileDir = os.path.dirname(os.path.realpath(__file__))
@@ -38,24 +41,19 @@ def getRep(bgrImg):
     start = time.time()
     if bgrImg is None:
         raise Exception("Unable to load image/frame")
-
+    # 对传入的图片进行颜色转换，转换成RGB格式的图片
     rgbImg = cv2.resize(
         cv2.cvtColor(bgrImg, cv2.COLOR_BGR2RGB), (DETECTION_WIDTH, DETECTION_HEIGHT), interpolation=cv2.INTER_CUBIC)
-
+    # 对传入的图片进行灰度图片提取
     gray = cv2.resize(
         cv2.cvtColor(bgrImg, cv2.COLOR_BGR2GRAY), (DETECTION_WIDTH, DETECTION_HEIGHT), interpolation=cv2.INTER_CUBIC)
 
-    if args.verbose:
-        print("  + Original size: {}".format(rgbImg.shape))
-    if args.verbose:
-        print("Loading the image took {} seconds.".format(time.time() - start))
-    start = time.time()
+
+    # 用Dlib的"get_frontal_face_detector()"函数进行人脸检测，传入的参数是刚才处理的灰度图片，并不对图片进行向下降采样
     bb = detector(gray, 0)
 
     if bb is None:
         return None
-    if args.verbose:
-        print("Face detection took {} seconds.".format(time.time() - start))
 
     start = time.time()
 
@@ -70,8 +68,6 @@ def getRep(bgrImg):
 
     if alignedFaces is None:
         raise Exception("Unable to align the frame")
-    if args.verbose:
-        print("Alignment took {} seconds.".format(time.time() - start))
 
     start = time.time()
 
@@ -79,9 +75,6 @@ def getRep(bgrImg):
     for alignedFace in alignedFaces:
         reps.append(net.forward(alignedFace))
 
-    if args.verbose:
-        print("Neural network forward pass took {} seconds.".format(
-            time.time() - start))
 
     # print (reps)
     return (reps,bb)
@@ -115,9 +108,7 @@ def infer(img, args):
         # print (str(le.inverse_transform(max2)) + ": "+str( predictions [max2]))
         # ^ prints the second prediction
         confidences.append(predictions[maxI])
-        if args.verbose:
-            print("Prediction took {} seconds.".format(time.time() - start))
-            pass
+
         # print("Predict {} with {:.2f} confidence.".format(person.decode('utf-8'), confidence))
         if isinstance(clf, GMM):
             dist = np.linalg.norm(rep - clf.means_[maxI])
@@ -135,10 +126,8 @@ def cam_dect():
     # video_capture.set(4, args.height)
 
     confidenceList = []
-    # set_trace()
 
-    # create named pipe to
-    # 通过管道技创建一个往里面写图片的文件
+    # 通过管道技创建一个往里面写图片的文件，运用进程间管道通信技术
     invasion_subsys_name_pipe = "/tmp/IPC1_Image_Pipe"
     try:
         # os.unlink(invasion_subsys_name_pipe)
@@ -191,12 +180,7 @@ def cam_dect():
                 global cam_confidences
                 cam_confidences = c
 
-            exist_unknown_person = False
 
-            # 7-15-23
-
-            send_safe = ""
-            send_unsafe = ""
             # Print the person name and conf value on the frame next to the person
             # Also print the bounding box
             for idx, person in enumerate(persons):
@@ -206,26 +190,11 @@ def cam_dect():
                 #             (bbs[idx].left() * 4, bbs[idx].bottom() * 4 + 20), cv2.FONT_HERSHEY_SIMPLEX, 0.5,
                 #             (255, 255, 255), 1)
 
-                if persons[idx] == "_unknown":
-                    exist_unknown_person = True
-                    send_unsafe += "{} @{:.2f}".format(person,
-                                                       confidences[idx]) + "\n"
-                else:
-                    send_safe += "{} @{:.2f}".format(person,
-                                                     confidences[idx]) + "\n"
-
-            if exist_unknown_person and previous_exist_unknown_person:
-                warning_counter = warning_counter + 1
-            else:
-                warning_counter = 0
-
-            previous_exist_unknown_person = exist_unknown_person
             os.write(invasion_subsys_fh, frame.tobytes())
         else:
             continue
         # cv2.imshow('', frame)
         # cv2.waitKey(0)
-
 
     cv2.destroyAllWindows()
     cp.close()
@@ -242,33 +211,35 @@ class myThread1(threading.Thread):
     def new_client(self, client, server):
         print("New client connected and was given id %d" % client['id'])
         #server.send_message_to_all("Hey all, a new client has joined us")
-        server.send_message_to_all("YES")
+        # server.send_message_to_all("YES")
 
     # Called for every client disconnecting
     def client_left(self, client, server):
         print("Client(%d) disconnected" % client['id'])
 
     # Called when a client sends a message
+    # 通过WebSocket与浏览器进行通信
     def message_received(self, client, server, message):
         global cam_dect_name
         global cam_confidences
         if len(message) > 200:
             message = message[:200] + '..'
-        print("Client(%d) said: %s" % (client['id'], message))
+        # print("Client(%d) said: %s" % (client['id'], message))
         global cam_confidences_count
         global sum_cam_confidences
         if (cam_dect_name == "[b'xuliang']"):
             sum_cam_confidences = sum_cam_confidences + cam_confidences
             cam_confidences_count = cam_confidences_count + 1
             print(cam_confidences_count)
+            # 每检测三帧进行取语音报警
             if (cam_confidences_count % 3 == 0):
-                print(cam_confidences_count)
+                # print(cam_confidences_count)
                 if ((sum_cam_confidences) / 3.0 >= 0.7):
                     server.send_message_to_all("JianGe")
                 else:
                     server.send_message_to_all("NoPower")
                 sum_cam_confidences = 0
-                print(sum_cam_confidences)
+                # print(sum_cam_confidences)
         elif (cam_dect_name == "[]"):
             server.send_message_to_all("Normal")
             print(cam_confidences_count)
@@ -377,16 +348,7 @@ if __name__ == '__main__':
             'nn4.small2.v1.t7'))
     parser.add_argument('--imgDim', type=int,
                         help="Default image dimension.", default=96)
-    parser.add_argument(
-        '--captureDevice',
-        type=int,
-        default=0,
-        help='Capture device. 0 for latop webcam and 1 for usb webcam')
-    parser.add_argument('--width', type=int, default=320)
-    parser.add_argument('--height', type=int, default=240)
-    parser.add_argument('--threshold', type=float, default=0.5)
-    parser.add_argument('--cuda', action='store_true', default=True)
-    parser.add_argument('--verbose', action='store_true')
+    parser.add_argument('--cuda', action='store_true', help="Default to use GPU and Cuda.",default=True)
     parser.add_argument(
         '--classifierModel',
         type=str,
